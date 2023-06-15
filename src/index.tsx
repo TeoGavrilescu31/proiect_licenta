@@ -1,11 +1,12 @@
 import ReactDOM from 'react-dom'
 import { App } from './App'
+import './index.css'
 import Phaser from 'phaser'
 import PlayScene from './scenes/Play'
 import PreloadScene from './scenes/Preload'
 
-const WIDTH = 1600
-const HEIGHT = 640
+const WIDTH = window.innerWidth // 18 * 32 // 18 tiles * 32 pixels
+const HEIGHT = window.innerHeight //18 * 32 // 18 tiles * 32 pixels
 
 const SHARED_CONFIG = {
   width: WIDTH,
