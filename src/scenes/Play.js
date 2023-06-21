@@ -7,8 +7,8 @@ class Play extends Phaser.Scene {
   }
 
   create() {
-    const { map, ground } = this.createMap()
-    this.map = map
+    const { chunk, ground } = this.createMap()
+    this.chunk = chunk
     this.player = this.createPlayer()
     this.physics.add.collider(this.player, ground)
     this.cursors = this.input.keyboard.createCursorKeys()
@@ -16,7 +16,9 @@ class Play extends Phaser.Scene {
 
     this.bgWidth = 18 * 32
     this.numBg = 6
-    this.gameSpeed = 1
+    this.gameSpeed = 10
+
+    this.jumps = 0
 
     this.bgs = []
     for (let i = 0; i < this.numBg; i++) {
@@ -24,28 +26,36 @@ class Play extends Phaser.Scene {
       background.setOrigin(0, 0)
       this.bgs.push(background)
     }
+
+    this.maps = [{ chunk, ground }]
+    for (let i = 1; i < this.numBg; i++) {
+      const { chunk, ground } = this.createChunk()
+      this.physics.add.collider(this.player, ground)
+      ground.x = this.bgWidth * i
+      this.maps.push({ chunk, ground })
+    }
   }
 
   createMap() {
-    const map = this.make.tilemap({
-      key: 'map',
+    const chunk = this.make.tilemap({
+      key: 'chunk0',
     })
 
-    this.tileset1 = map.addTilesetImage('Tileset', 'tiles-1')
+    this.tileset1 = chunk.addTilesetImage('Tileset', 'tiles-1')
 
-    const background1 = map.addTilesetImage('1', 'background-1')
-    const background2 = map.addTilesetImage('2', 'background-2')
-    const background3 = map.addTilesetImage('3', 'background-3')
-    const background4 = map.addTilesetImage('4', 'background-4')
-    const background5 = map.addTilesetImage('5', 'background-5')
+    // const background1 = map.addTilesetImage('1', 'background-1')
+    // const background2 = map.addTilesetImage('2', 'background-2')
+    // const background3 = map.addTilesetImage('3', 'background-3')
+    // const background4 = map.addTilesetImage('4', 'background-4')
+    // const background5 = map.addTilesetImage('5', 'background-5')
 
-    map.createLayer('Background1', background1)
-    map.createLayer('Background2', background2)
-    map.createLayer('Background3', background3)
-    map.createLayer('Background4', background4)
-    this.bg = map.createDynamicLayer('Background5', background5)
+    // map.createLayer('Background1', background1)
+    // map.createLayer('Background2', background2)
+    // map.createLayer('Background3', background3)
+    // map.createLayer('Background4', background4)
+    // this.bg = map.createDynamicLayer('Background5', background5)
 
-    const ground = map.createLayer('Ground', this.tileset1)
+    const ground = chunk.createLayer('Ground', this.tileset1)
     ground.setCollisionByProperty({ collides: true })
 
     // SHOW COLLISION TILES
@@ -55,8 +65,20 @@ class Play extends Phaser.Scene {
     //   collidingTileColor: new Phaser.Display.Color(254, 254, 10, 255),
     //   faceColor: new Phaser.Display.Color(254, 10, 10, 255),
     // })
-    ground.setDepth(1)
-    return { map, ground }
+    return { chunk, ground }
+  }
+
+  createChunk() {
+    const randomChunk = Phaser.Math.Between(0, 3)
+    console.log(randomChunk)
+    const chunk = this.make.tilemap({
+      key: 'chunk' + randomChunk,
+    })
+
+    this.tileset1 = chunk.addTilesetImage('Tileset', 'tiles-1')
+    const ground = chunk.createLayer('Ground', this.tileset1)
+    ground.setCollisionByProperty({ collides: true })
+    return { chunk, ground }
   }
 
   createPlayer() {
@@ -64,7 +86,22 @@ class Play extends Phaser.Scene {
   }
 
   update() {
-    const { left, right, up, down } = this.cursors
+    const { up, down } = this.cursors
+    let onGround =
+      this.player.body.blocked.down || this.player.body.touching.down
+
+    let touchingRight =
+      this.player.body.blocked.right || this.player.body.touching.right
+
+    console.log('wall', touchingRight)
+
+    if (onGround) {
+      this.jumps = 0
+    }
+
+    this.maps.forEach((map) => {
+      map.ground.x -= this.gameSpeed
+    })
 
     this.bgs.forEach((bg) => {
       bg.x -= this.gameSpeed
@@ -76,19 +113,23 @@ class Play extends Phaser.Scene {
       this.bgs.push(firstBg)
     }
 
+    if (this.maps[0].ground.x <= -this.bgWidth) {
+      console.log(this.maps[0].ground.x)
+      this.maps.shift()
+      const { chunk, ground } = this.createChunk()
+      this.physics.add.collider(this.player, ground)
+      ground.x = this.maps[this.maps.length - 1].ground.x + this.bgWidth
+      this.maps.push({ chunk, ground })
+    }
+
     this.gameSpeed += 0.001
 
-    console.log(this.gameSpeed)
-
-    if (left.isDown) {
-      this.player.setVelocityX(-this.playerSpeed)
-    } else if (right.isDown) {
-      this.player.setVelocityX(this.playerSpeed)
-    } else if (up.isDown) {
+    if (up.isDown && this.jumps < 3) {
       this.player.setVelocityY(-this.playerSpeed)
-    } else if (down.isDown) {
+      this.jumps++
+    } else if (down.isDown && !onGround) {
       this.player.setVelocityY(this.playerSpeed)
-    } else this.player.setVelocityX(0)
+    }
   }
 }
 

@@ -6,7 +6,10 @@ class Preload extends Phaser.Scene {
   }
 
   preload() {
-    this.load.tilemapTiledJSON('map', 'assets/FirstChunk.json')
+    this.load.tilemapTiledJSON('chunk0', 'assets/FirstChunk.json')
+    this.load.tilemapTiledJSON('chunk1', 'assets/Chunk1.json')
+    this.load.tilemapTiledJSON('chunk2', 'assets/Chunk2.json')
+    this.load.tilemapTiledJSON('chunk3', 'assets/Chunk3.json')
     this.load.image('tiles-1', 'assets/Tileset.png')
     this.load.image('background-1', 'assets/Background/1.png')
     this.load.image('background-2', 'assets/Background/2.png')
