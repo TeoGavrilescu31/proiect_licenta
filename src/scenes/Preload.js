@@ -17,6 +17,18 @@ class Preload extends Phaser.Scene {
     this.load.image('background-4', 'assets/Background/4.png')
     this.load.image('background-5', 'assets/Background/5.png')
     this.load.image('player', 'assets/cat_animations/Cat.png')
+    this.load.spritesheet('jump', 'assets/cat_animations/Cat-Jump.png', {
+      frameWidth: 32,
+      frameHeight: 32,
+    })
+    this.load.spritesheet('fall', 'assets/cat_animations/Cat-Fall.png', {
+      frameWidth: 32,
+      frameHeight: 32,
+    })
+    this.load.spritesheet('run', 'assets/cat_animations/Cat-Run.png', {
+      frameWidth: 32,
+      frameHeight: 32,
+    })
 
     this.load.image('bg', 'assets/Background.png')
   }
