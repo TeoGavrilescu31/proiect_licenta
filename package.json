@@ -19,6 +19,9 @@
   "author": "Vishwas",
   "license": "MIT",
   "dependencies": {
+    "@emotion/react": "^11.11.1",
+    "@emotion/styled": "^11.11.0",
+    "@mui/material": "^5.13.6",
     "phaser": "^3.55.2",
     "react": "^17.0.1",
     "react-dom": "^17.0.1"

@@ -1,0 +1,7 @@
+.scores {
+  color: aliceblue;
+  position: absolute;
+  font-size: 20px;
+  bottom: 2.5rem;
+  left: 5rem;
+}

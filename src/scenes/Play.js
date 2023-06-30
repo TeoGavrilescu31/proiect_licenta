@@ -1,5 +1,6 @@
 import Phaser from 'phaser'
 import Player from '../entities/Player'
+// import Obstacle from '../entities/Obstacle'
 
 class Play extends Phaser.Scene {
   constructor() {
@@ -7,14 +8,22 @@ class Play extends Phaser.Scene {
   }
 
   create() {
-    const { chunk, ground } = this.createMap()
+    const { chunk, ground, walls } = this.createMap()
+    this.score = 0
     this.chunk = chunk
     this.player = this.createPlayer()
+    this.player.body.setMaxVelocityY(800)
     this.player.setScale(3)
     this.physics.add.collider(this.player, ground)
-    this.cursors = this.input.keyboard.createCursorKeys()
-    this.playerSpeed = 1000
+    this.physics.add.collider(this.player, walls, () => this.endGame())
 
+    this.cursors = this.input.keyboard.createCursorKeys()
+    this.playerSpeed = 800
+    // const firstObstacle = this.spawnObstacle(window.innerWidth + 100)
+    // const secondObstacle = this.spawnObstacle(window.innerWidth + 300)
+    // const thirdObstacle = this.spawnObstacle(window.innerWidth + 500)
+    // this.obstacles = [firstObstacle, secondObstacle, thirdObstacle]
+    // this.obstacles.forEach((obs) => this.physics.add.collider(obs, ground))
     this.bgWidth = 18 * 32
     this.numBg = 6
     this.gameSpeed = 10
@@ -28,12 +37,15 @@ class Play extends Phaser.Scene {
       this.bgs.push(background)
     }
 
-    this.maps = [{ chunk, ground }]
+    this.maps = [{ chunk, ground, walls }]
     for (let i = 1; i < this.numBg; i++) {
-      const { chunk, ground } = this.createChunk()
+      const { chunk, ground, walls } = this.createChunk()
       this.physics.add.collider(this.player, ground)
+      this.physics.add.collider(this.player, walls, () => this.endGame())
+      // this.obstacles.forEach((obs) => this.physics.add.collider(obs, ground))
       ground.x = this.bgWidth * i
-      this.maps.push({ chunk, ground })
+      walls.x = this.bgWidth * i
+      this.maps.push({ chunk, ground, walls })
     }
     this.anims.create({
       key: 'jump',
@@ -63,6 +75,15 @@ class Play extends Phaser.Scene {
       frameRate: 10,
       repeat: -1,
     })
+
+    this.scoreText = this.add
+      .text(10, 10, 'Score: 0', {
+        fontFamily: 'VT323',
+        fontSize: '64px',
+        fill: '#000',
+        align: 'right',
+      })
+      .setOrigin(0, 0)
   }
 
   createMap() {
@@ -71,8 +92,11 @@ class Play extends Phaser.Scene {
     })
     this.tileset1 = chunk.addTilesetImage('Tileset', 'tiles-1')
     const ground = chunk.createLayer('Ground', this.tileset1)
+    const walls = chunk.createLayer('Walls', this.tileset1)
     ground.setCollisionByProperty({ collides: true })
-    return { chunk, ground }
+    walls.setCollisionByProperty({ collides: true })
+    ground.y = walls.y = this.game.config.height - 256
+    return { chunk, ground, walls }
   }
 
   // const background1 = map.addTilesetImage('1', 'background-1')
@@ -103,12 +127,33 @@ class Play extends Phaser.Scene {
 
     this.tileset1 = chunk.addTilesetImage('Tileset', 'tiles-1')
     const ground = chunk.createLayer('Ground', this.tileset1)
+    const walls = chunk.createLayer('Walls', this.tileset1)
     ground.setCollisionByProperty({ collides: true })
-    return { chunk, ground }
+    walls.setCollisionByProperty({ collides: true })
+    ground.y = walls.y = this.game.config.height - 256
+    return { chunk, ground, walls }
   }
 
   createPlayer() {
     return new Player(this, 200, 50)
+  }
+
+  // spawnObstacle(x) {
+  //   const textureKey = Phaser.Math.Between(1, 8) // Randomize the obstacle's texture
+  //   return new Obstacle(this, x + 200, 100, `Obstacle${textureKey}`)
+  // }
+
+  endGame() {
+    const saveScore = () => {
+      const highScores = JSON.parse(localStorage.getItem('highScores') || '[]')
+      const newScore = { score: this.score }
+      highScores.push(newScore)
+      highScores.sort((a, b) => b.score - a.score)
+      const updatedScores = highScores.slice(0, 10)
+      localStorage.setItem('highScores', JSON.stringify(updatedScores))
+    }
+    saveScore()
+    this.scene.start('EndScene')
   }
 
   update() {
@@ -124,22 +169,22 @@ class Play extends Phaser.Scene {
       this.player.setVelocityY(this.playerSpeed)
     }
 
-    // let touchingRight =
-    //   this.player.body.blocked.right || this.player.body.touching.right
-
-    // console.log('wall', touchingRight)
-
     if (onGround) {
       this.jumps = 0
     }
 
     this.maps.forEach((map) => {
       map.ground.x -= this.gameSpeed
+      if (map.walls) {
+        map.walls.x -= this.gameSpeed
+      }
     })
 
     this.bgs.forEach((bg) => {
       bg.x -= this.gameSpeed
     })
+
+    // this.obstacles.forEach((obstacle) => (obstacle.x -= this.gameSpeed))
 
     if (this.bgs[0].x <= -this.bgWidth) {
       let firstBg = this.bgs.shift()
@@ -149,11 +194,29 @@ class Play extends Phaser.Scene {
 
     if (this.maps[0].ground.x <= -this.bgWidth) {
       this.maps.shift()
-      const { chunk, ground } = this.createChunk()
+      const { chunk, ground, walls } = this.createChunk()
       this.physics.add.collider(this.player, ground)
+      this.physics.add.collider(this.player, walls, () => this.endGame())
       ground.x = this.maps[this.maps.length - 1].ground.x + this.bgWidth
-      this.maps.push({ chunk, ground })
+      walls.x = this.maps[this.maps.length - 1].walls.x + this.bgWidth
+      this.maps.push({ chunk, ground, walls })
+      this.score += 100
+      this.scoreText.setText(`Score: ${this.score}`)
+      this.gameSpeed += 0.1
     }
+
+    console.log(this.score)
+
+    // if (this.obstacles[0].x == 0) {
+    //   this.obstacles[0].destroy()
+    //   this.obstacles.shift()
+    //   const newObstacle = this.spawnObstacle(window.innerWidth + 100)
+
+    //   this.maps.forEach((map) =>
+    //     this.physics.add.collider(newObstacle, map.ground)
+    //   )
+    //   this.obstacles.push(newObstacle)
+    // }
 
     if (this.player.body.velocity.y > 0) {
       this.player.anims.play('fall', true)
@@ -162,7 +225,10 @@ class Play extends Phaser.Scene {
     } else if (onGround) {
       this.player.anims.play('run', true)
     }
-    console.log(this.player.body.velocity.y)
+
+    if (this.player.y + 48 >= this.game.config.height || this.player.y <= 0) {
+      this.endGame()
+    }
   }
 }
 

@@ -1,3 +1,5 @@
+@import url('https://fonts.googleapis.com/css2?family=VT323&display=swap');
+
 * {
   margin: 0;
   padding: 0;
@@ -6,4 +8,9 @@
 
 html {
   overflow: hidden;
+  font-family: 'VT323', monospace;
+  background: #000;
+}
+canvas {
+  box-shadow: 0 30px 440px 100px #37446e;
 }
