@@ -1,6 +1,6 @@
 import Phaser from 'phaser'
 import Player from '../entities/Player'
-// import Obstacle from '../entities/Obstacle'
+import Obstacle from '../entities/Obstacle'
 
 class Play extends Phaser.Scene {
   constructor() {
@@ -8,7 +8,7 @@ class Play extends Phaser.Scene {
   }
 
   create() {
-    const { chunk, ground, walls } = this.createMap()
+    const { chunk, ground, walls, tileBackground } = this.createMap()
     this.score = 0
     this.chunk = chunk
     this.player = this.createPlayer()
@@ -19,33 +19,59 @@ class Play extends Phaser.Scene {
 
     this.cursors = this.input.keyboard.createCursorKeys()
     this.playerSpeed = 800
-    // const firstObstacle = this.spawnObstacle(window.innerWidth + 100)
-    // const secondObstacle = this.spawnObstacle(window.innerWidth + 300)
-    // const thirdObstacle = this.spawnObstacle(window.innerWidth + 500)
-    // this.obstacles = [firstObstacle, secondObstacle, thirdObstacle]
-    // this.obstacles.forEach((obs) => this.physics.add.collider(obs, ground))
+    this.obstacles = []
     this.bgWidth = 18 * 32
     this.numBg = 6
     this.gameSpeed = 10
 
     this.jumps = 0
 
-    this.bgs = []
+    this.bgs1 = []
     for (let i = 0; i < this.numBg; i++) {
-      const background = this.add.sprite(i * this.bgWidth, 0, 'bg')
-      background.setOrigin(0, 0)
-      this.bgs.push(background)
+      const background = this.add
+        .sprite(i * this.bgWidth, 0, 'background-1')
+        .setOrigin(0, 0)
+      this.bgs1.push(background)
+    }
+    this.bgs2 = []
+    for (let i = 0; i < this.numBg; i++) {
+      const background = this.add
+        .sprite(i * this.bgWidth, 0, 'background-2')
+        .setOrigin(0, 0)
+      this.bgs2.push(background)
+    }
+    this.bgs3 = []
+    for (let i = 0; i < this.numBg; i++) {
+      const background = this.add
+        .sprite(i * this.bgWidth, 0, 'background-3')
+        .setOrigin(0, 0)
+      this.bgs3.push(background)
+    }
+    this.bgs4 = []
+    for (let i = 0; i < this.numBg; i++) {
+      const background = this.add
+        .sprite(i * this.bgWidth, 0, 'background-4')
+        .setOrigin(0, 0)
+      this.bgs4.push(background)
+    }
+    this.bgs5 = []
+    for (let i = 0; i < this.numBg; i++) {
+      const background = this.add
+        .sprite(i * this.bgWidth, 0, 'background-5')
+        .setOrigin(0, 0)
+      this.bgs5.push(background)
     }
 
-    this.maps = [{ chunk, ground, walls }]
+    this.maps = [{ chunk, ground, walls, tileBackground }]
     for (let i = 1; i < this.numBg; i++) {
-      const { chunk, ground, walls } = this.createChunk()
+      const { chunk, ground, walls, tileBackground } = this.createChunk()
       this.physics.add.collider(this.player, ground)
       this.physics.add.collider(this.player, walls, () => this.endGame())
-      // this.obstacles.forEach((obs) => this.physics.add.collider(obs, ground))
+      this.obstacles.forEach((obs) => this.physics.add.collider(obs, ground))
       ground.x = this.bgWidth * i
       walls.x = this.bgWidth * i
-      this.maps.push({ chunk, ground, walls })
+      tileBackground.x = this.bgWidth * i
+      this.maps.push({ chunk, ground, walls, tileBackground })
     }
     this.anims.create({
       key: 'jump',
@@ -91,12 +117,13 @@ class Play extends Phaser.Scene {
       key: 'chunk0',
     })
     this.tileset1 = chunk.addTilesetImage('Tileset', 'tiles-1')
+    const tileBackground = chunk.createLayer('Background', this.tileset1)
     const ground = chunk.createLayer('Ground', this.tileset1)
     const walls = chunk.createLayer('Walls', this.tileset1)
     ground.setCollisionByProperty({ collides: true })
     walls.setCollisionByProperty({ collides: true })
-    ground.y = walls.y = this.game.config.height - 256
-    return { chunk, ground, walls }
+    ground.y = walls.y = tileBackground.y = this.game.config.height - 256
+    return { chunk, ground, walls, tileBackground }
   }
 
   // const background1 = map.addTilesetImage('1', 'background-1')
@@ -120,28 +147,30 @@ class Play extends Phaser.Scene {
   // })
 
   createChunk() {
-    const randomChunk = Phaser.Math.Between(0, 3)
+    const randomChunk = Phaser.Math.Between(0, 5)
     const chunk = this.make.tilemap({
-      key: 'chunk' + randomChunk,
+      key: `chunk${randomChunk}`,
     })
 
     this.tileset1 = chunk.addTilesetImage('Tileset', 'tiles-1')
+    const tileBackground = chunk.createLayer('Background', this.tileset1)
     const ground = chunk.createLayer('Ground', this.tileset1)
     const walls = chunk.createLayer('Walls', this.tileset1)
     ground.setCollisionByProperty({ collides: true })
     walls.setCollisionByProperty({ collides: true })
-    ground.y = walls.y = this.game.config.height - 256
-    return { chunk, ground, walls }
+    ground.y = walls.y = tileBackground.y = this.game.config.height - 256
+
+    return { chunk, ground, walls, tileBackground }
   }
 
   createPlayer() {
     return new Player(this, 200, 50)
   }
 
-  // spawnObstacle(x) {
-  //   const textureKey = Phaser.Math.Between(1, 8) // Randomize the obstacle's texture
-  //   return new Obstacle(this, x + 200, 100, `Obstacle${textureKey}`)
-  // }
+  spawnObstacle(x) {
+    const textureKey = Phaser.Math.Between(2, 8) // Randomize the obstacle's texture
+    return new Obstacle(this, x + 350, 100, `Obstacle${textureKey}`)
+  }
 
   endGame() {
     const saveScore = () => {
@@ -178,45 +207,80 @@ class Play extends Phaser.Scene {
       if (map.walls) {
         map.walls.x -= this.gameSpeed
       }
+      if (map.tileBackground) {
+        map.tileBackground.x -= this.gameSpeed
+      }
     })
 
-    this.bgs.forEach((bg) => {
-      bg.x -= this.gameSpeed
+    this.bgs1.forEach((bg) => {
+      bg.x -= this.gameSpeed / 10
+    })
+    this.bgs2.forEach((bg) => {
+      bg.x -= this.gameSpeed / 10
+    })
+    this.bgs3.forEach((bg) => {
+      bg.x -= this.gameSpeed / 5
+    })
+    this.bgs4.forEach((bg) => {
+      bg.x -= this.gameSpeed / 2.5
+    })
+    this.bgs5.forEach((bg) => {
+      bg.x -= this.gameSpeed / 1.5
     })
 
-    // this.obstacles.forEach((obstacle) => (obstacle.x -= this.gameSpeed))
+    this.obstacles.forEach((obstacle) => (obstacle.x -= this.gameSpeed))
+    this.obstacles.forEach((obstacle) => {
+      this.physics.add.collider(this.player, obstacle, () => this.endGame())
+    })
 
-    if (this.bgs[0].x <= -this.bgWidth) {
-      let firstBg = this.bgs.shift()
-      firstBg.x = this.bgs[this.bgs.length - 1].x + this.bgWidth
-      this.bgs.push(firstBg)
+    if (this.bgs1[0].x <= -this.bgWidth) {
+      let firstBg = this.bgs1.shift()
+      firstBg.x = this.bgs1[this.bgs1.length - 1].x + this.bgWidth
+      this.bgs1.push(firstBg)
+    }
+    if (this.bgs2[0].x <= -this.bgWidth) {
+      let firstBg = this.bgs2.shift()
+      firstBg.x = this.bgs2[this.bgs2.length - 1].x + this.bgWidth
+      this.bgs2.push(firstBg)
+    }
+    if (this.bgs3[0].x <= -this.bgWidth) {
+      let firstBg = this.bgs3.shift()
+      firstBg.x = this.bgs3[this.bgs3.length - 1].x + this.bgWidth
+      this.bgs3.push(firstBg)
+    }
+    if (this.bgs4[0].x <= -this.bgWidth) {
+      let firstBg = this.bgs4.shift()
+      firstBg.x = this.bgs4[this.bgs4.length - 1].x + this.bgWidth
+      this.bgs4.push(firstBg)
+    }
+    if (this.bgs5[0].x <= -this.bgWidth) {
+      let firstBg = this.bgs5.shift()
+      firstBg.x = this.bgs5[this.bgs5.length - 1].x + this.bgWidth
+      this.bgs5.push(firstBg)
     }
 
     if (this.maps[0].ground.x <= -this.bgWidth) {
       this.maps.shift()
-      const { chunk, ground, walls } = this.createChunk()
+      const { chunk, ground, walls, tileBackground } = this.createChunk()
       this.physics.add.collider(this.player, ground)
       this.physics.add.collider(this.player, walls, () => this.endGame())
       ground.x = this.maps[this.maps.length - 1].ground.x + this.bgWidth
       walls.x = this.maps[this.maps.length - 1].walls.x + this.bgWidth
-      this.maps.push({ chunk, ground, walls })
+      tileBackground.x =
+        this.maps[this.maps.length - 1].tileBackground.x + this.bgWidth
+      this.maps.push({ chunk, ground, walls, tileBackground })
+      const obstacle = this.spawnObstacle(ground.x)
+      // obstacle.setScale(Phaser.Math.Between(1, 1.5, 2))
+      this.obstacles.push(obstacle)
+      this.physics.add.collider(obstacle, ground)
       this.score += 100
       this.scoreText.setText(`Score: ${this.score}`)
       this.gameSpeed += 0.1
     }
 
-    console.log(this.score)
-
-    // if (this.obstacles[0].x == 0) {
-    //   this.obstacles[0].destroy()
-    //   this.obstacles.shift()
-    //   const newObstacle = this.spawnObstacle(window.innerWidth + 100)
-
-    //   this.maps.forEach((map) =>
-    //     this.physics.add.collider(newObstacle, map.ground)
-    //   )
-    //   this.obstacles.push(newObstacle)
-    // }
+    if (this.obstacles[0] && this.obstacles[0].x <= 0 - this.gameSpeed) {
+      this.obstacles[0].destroy()
+    }
 
     if (this.player.body.velocity.y > 0) {
       this.player.anims.play('fall', true)

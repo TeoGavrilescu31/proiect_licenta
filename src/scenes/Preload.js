@@ -11,6 +11,8 @@ class Preload extends Phaser.Scene {
     this.load.tilemapTiledJSON('chunk1', 'assets/Chunk1.json')
     this.load.tilemapTiledJSON('chunk2', 'assets/Chunk2.json')
     this.load.tilemapTiledJSON('chunk3', 'assets/Chunk3.json')
+    this.load.tilemapTiledJSON('chunk4', 'assets/Chunk4.json')
+    this.load.tilemapTiledJSON('chunk5', 'assets/Chunk5.json')
 
     // TileSets
     this.load.image('tiles-1', 'assets/Tileset.png')
@@ -41,14 +43,13 @@ class Preload extends Phaser.Scene {
     })
 
     // Obstacles
-    this.load.image('Obstacle1', 'assets/Obstacles/25.png')
     this.load.image('Obstacle2', 'assets/Obstacles/Box1.png')
     this.load.image('Obstacle3', 'assets/Obstacles/Box2.png')
     this.load.image('Obstacle4', 'assets/Obstacles/Box3.png')
     this.load.image('Obstacle5', 'assets/Obstacles/Box4.png')
     this.load.image('Obstacle6', 'assets/Obstacles/Box5.png')
     this.load.image('Obstacle7', 'assets/Obstacles/Box6.png')
-    this.load.image('Obstacle18', 'assets/Obstacles/Boxes1.png')
+    this.load.image('Obstacle8', 'assets/Obstacles/Boxes1.png')
   }
 
   create() {
