@@ -16,10 +16,11 @@ class Play extends Phaser.Scene {
     this.player.setScale(3)
     this.physics.add.collider(this.player, ground)
     this.physics.add.collider(this.player, walls, () => this.endGame())
+    this.firstObstacle = this.spawnObstacle(this.game.config.width)
+    this.obstacles = [this.firstObstacle]
 
     this.cursors = this.input.keyboard.createCursorKeys()
     this.playerSpeed = 800
-    this.obstacles = []
     this.bgWidth = 18 * 32
     this.numBg = 6
     this.gameSpeed = 10
@@ -110,6 +111,31 @@ class Play extends Phaser.Scene {
         align: 'right',
       })
       .setOrigin(0, 0)
+
+    // Define Q-learning parameters
+    // this.qTable = this.initialQ = data.qTable // Q-table to store the state-action values
+    // this.learningRate = data.learningRate // Learning rate (alpha)
+    // this.discountFactor = data.discountFactor // Discount factor (gamma)
+    // this.epsilon = data.epsilon // Epsilon value for epsilon-greedy policy
+    // this.currentState = data.currentState // Current state of the game
+    // this.currentAction = data.currentAction // Current action taken by the player
+    // this.previousState = data.previousState // Previous state of the game
+    // this.previousAction = data.previousAction // Previous action taken by the player
+    // this.reward = data.reward // Reward received after taking an action
+    // this.totalScore = data.totalScore // Total score earned by the player
+
+    // Define Q-learning parameters
+    const storedQTable = localStorage.getItem('qTable')
+    this.qTable = storedQTable ? JSON.parse(storedQTable) : {}
+    this.learningRate = 0.1 // Learning rate (alpha)
+    this.discountFactor = 0.9 // Discount factor (gamma)
+    this.epsilon = 0.2 // Epsilon value for epsilon-greedy policy
+    this.currentState = [] // Current state of the game
+    this.currentAction = 0 // Current action taken by the player
+    this.previousState = [] // Previous state of the game
+    this.previousAction = 0 // Previous action taken by the player
+    this.reward = 10 // Reward received after taking an action
+    this.totalScore = 0 // Total score earned by the player
   }
 
   createMap() {
@@ -125,18 +151,6 @@ class Play extends Phaser.Scene {
     ground.y = walls.y = tileBackground.y = this.game.config.height - 256
     return { chunk, ground, walls, tileBackground }
   }
-
-  // const background1 = map.addTilesetImage('1', 'background-1')
-  // const background2 = map.addTilesetImage('2', 'background-2')
-  // const background3 = map.addTilesetImage('3', 'background-3')
-  // const background4 = map.addTilesetImage('4', 'background-4')
-  // const background5 = map.addTilesetImage('5', 'background-5')
-
-  // map.createLayer('Background1', background1)
-  // map.createLayer('Background2', background2)
-  // map.createLayer('Background3', background3)
-  // map.createLayer('Background4', background4)
-  // this.bg = map.createDynamicLayer('Background5', background5)
 
   // SHOW COLLISION TILES
   // const debugGraphics = this.add.graphics().setAlpha(0.7)
@@ -182,7 +196,44 @@ class Play extends Phaser.Scene {
       localStorage.setItem('highScores', JSON.stringify(updatedScores))
     }
     saveScore()
-    this.scene.start('EndScene')
+    // this.scene.restart({
+    //   qTable: this.qTable,
+    //   learningRate: this.learningRate,
+    //   discountFactor: this.discountFactor,
+    //   epsilon: this.epsilon,
+    //   currentState: this.currentState,
+    //   currentAction: this.currentAction,
+    //   previousState: this.previousState,
+    //   reward: this.reward,
+    //   totalScore: this.totalScore,
+    // })
+    localStorage.setItem('qTable', JSON.stringify(this.qTable))
+    this.scene.restart()
+    // this.scene.start('EndScene')
+  }
+  getCurrentState() {
+    // Return the current state representation based on the game's state
+    // You need to define your own logic here based on your game's state
+    // For example, you can use the player's position, velocity, and the positions of obstacles as the state representation
+    // Gather relevant information about the game state
+    const playerX = this.player.x
+    const playerY = this.player.y
+    const playerVelY = this.player.body.velocity.y
+    const obstacleX = this.obstacles[0].x
+    const obstacleY = this.obstacles[0].y
+    const distToObs = playerX - obstacleX
+    const score = this.score
+
+    // Return the state as an array or object
+    return [
+      playerX,
+      playerY,
+      playerVelY,
+      obstacleX,
+      obstacleY,
+      distToObs,
+      score,
+    ]
   }
 
   update() {
@@ -293,6 +344,68 @@ class Play extends Phaser.Scene {
     if (this.player.y + 48 >= this.game.config.height || this.player.y <= 0) {
       this.endGame()
     }
+
+    // Initialize the current state if it is null
+    if (this.currentState === []) {
+      this.currentState = this.getCurrentState()
+    }
+    // Update Q-table based on the previous action and reward
+    if (this.previousState !== null && this.previousAction !== null) {
+      // Check if the current state is already in the Q-table
+      if (!this.qTable.hasOwnProperty(this.currentState)) {
+        this.qTable[this.currentState] = {}
+      }
+
+      // Check if the current action is already in the Q-table for the current state
+      if (!this.qTable[this.currentState].hasOwnProperty(this.currentAction)) {
+        this.qTable[this.currentState][this.currentAction] = 0
+      }
+
+      // Update the Q-value for the previous state-action pair using the Q-learning update rule
+      const previousQValue =
+        this.qTable[this.previousState][this.previousAction]
+      const maxQValue = Math.max(
+        ...Object.values(this.qTable[this.currentState])
+      )
+      const updatedQValue =
+        previousQValue +
+        this.learningRate *
+          (this.reward + this.discountFactor * maxQValue - previousQValue)
+      this.qTable[this.previousState][this.previousAction] = updatedQValue
+    }
+
+    // Choose the next action using an epsilon-greedy policy
+    const actions = ['up', 'nothing'] // Possible actions in the game
+    let nextAction = null
+
+    if (Math.random() < this.epsilon) {
+      // Randomly choose an action
+      nextAction = Phaser.Math.RND.pick(actions)
+      console.log('random:', nextAction)
+    } else {
+      // Choose the action with the highest Q-value for the current state
+      const stateActions = this.qTable[this.currentState]
+      nextAction = Object.keys(stateActions).reduce((a, b) =>
+        stateActions[a] > stateActions[b] ? a : b
+      )
+      console.log('table:', nextAction)
+    }
+
+    // Take the chosen action
+    if (nextAction === 'up' && this.jumps < 3) {
+      this.player.setVelocityY(-this.playerSpeed)
+      this.jumps++
+    }
+
+    // ...
+
+    // Update the previous state and action for the next iteration
+    this.previousState = this.currentState
+    this.previousAction = this.currentAction
+
+    // Update the current state and action with the new state and action
+    this.currentState = this.getCurrentState()
+    this.currentAction = nextAction
   }
 }
 

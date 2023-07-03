@@ -53,7 +53,28 @@ class Preload extends Phaser.Scene {
   }
 
   create() {
-    this.scene.start('PlayScene')
+    // Define Q-learning parameters
+    this.qTable = {} // Q-table to store the state-action values
+    this.learningRate = 0.1 // Learning rate (alpha)
+    this.discountFactor = 0.9 // Discount factor (gamma)
+    this.epsilon = 0.2 // Epsilon value for epsilon-greedy policy
+    this.currentState = [] // Current state of the game
+    this.currentAction = 0 // Current action taken by the player
+    this.previousState = [] // Previous state of the game
+    this.previousAction = 0 // Previous action taken by the player
+    this.reward = 0 // Reward received after taking an action
+    this.totalScore = 0 // Total score earned by the player
+    this.scene.start('PlayScene', {
+      qTable: this.qTable,
+      learningRate: this.learningRate,
+      discountFactor: this.discountFactor,
+      epsilon: this.epsilon,
+      currentState: this.currentState,
+      currentAction: this.currentAction,
+      previousState: this.previousState,
+      reward: this.reward,
+      totalScore: this.totalScore,
+    })
   }
 }
 
