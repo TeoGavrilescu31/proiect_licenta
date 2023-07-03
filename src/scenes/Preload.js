@@ -1,4 +1,5 @@
 import Phaser from 'phaser'
+import NeuralNetwork from '../NeuralNetwork'
 
 class Preload extends Phaser.Scene {
   constructor() {
@@ -53,7 +54,10 @@ class Preload extends Phaser.Scene {
   }
 
   create() {
-    this.scene.start('PlayScene')
+    const inputSize = 7 // Number of elements in the state representation
+    const outputSize = 2 // Number of possible actions: JUMP or DO_NOTHING
+    this.qNetwork = new NeuralNetwork(inputSize, outputSize)
+    this.scene.start('PlayScene', { qNetwork: this.qNetwork })
   }
 }
 

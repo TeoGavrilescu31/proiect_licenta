@@ -7,7 +7,9 @@ class Play extends Phaser.Scene {
     super('PlayScene')
   }
 
-  create() {
+  create(data) {
+    this.learningRate = 0.1
+    this.discountFactor = 0.9
     const { chunk, ground, walls, tileBackground } = this.createMap()
     this.score = 0
     this.chunk = chunk
@@ -16,10 +18,10 @@ class Play extends Phaser.Scene {
     this.player.setScale(3)
     this.physics.add.collider(this.player, ground)
     this.physics.add.collider(this.player, walls, () => this.endGame())
+    this.firstObstacle = this.spawnObstacle(this.game.config.width)
 
     this.cursors = this.input.keyboard.createCursorKeys()
     this.playerSpeed = 800
-    this.obstacles = []
     this.bgWidth = 18 * 32
     this.numBg = 6
     this.gameSpeed = 10
@@ -63,6 +65,7 @@ class Play extends Phaser.Scene {
     }
 
     this.maps = [{ chunk, ground, walls, tileBackground }]
+    this.obstacles = [this.firstObstacle]
     for (let i = 1; i < this.numBg; i++) {
       const { chunk, ground, walls, tileBackground } = this.createChunk()
       this.physics.add.collider(this.player, ground)
@@ -110,6 +113,9 @@ class Play extends Phaser.Scene {
         align: 'right',
       })
       .setOrigin(0, 0)
+    this.qNetwork = data.qNetwork
+    console.log(this.qNetwork)
+    this.gameLoop()
   }
 
   createMap() {
@@ -126,28 +132,8 @@ class Play extends Phaser.Scene {
     return { chunk, ground, walls, tileBackground }
   }
 
-  // const background1 = map.addTilesetImage('1', 'background-1')
-  // const background2 = map.addTilesetImage('2', 'background-2')
-  // const background3 = map.addTilesetImage('3', 'background-3')
-  // const background4 = map.addTilesetImage('4', 'background-4')
-  // const background5 = map.addTilesetImage('5', 'background-5')
-
-  // map.createLayer('Background1', background1)
-  // map.createLayer('Background2', background2)
-  // map.createLayer('Background3', background3)
-  // map.createLayer('Background4', background4)
-  // this.bg = map.createDynamicLayer('Background5', background5)
-
-  // SHOW COLLISION TILES
-  // const debugGraphics = this.add.graphics().setAlpha(0.7)
-  // ground.renderDebug(debugGraphics, {
-  //   tileColor: null,
-  //   collidingTileColor: new Phaser.Display.Color(254, 254, 10, 255),
-  //   faceColor: new Phaser.Display.Color(254, 10, 10, 255),
-  // })
-
   createChunk() {
-    const randomChunk = Phaser.Math.Between(0, 5)
+    const randomChunk = Phaser.Math.Between(0, 0)
     const chunk = this.make.tilemap({
       key: `chunk${randomChunk}`,
     })
@@ -172,6 +158,11 @@ class Play extends Phaser.Scene {
     return new Obstacle(this, x + 350, 100, `Obstacle${textureKey}`)
   }
 
+  jump() {
+    this.player.setVelocityY(-this.playerSpeed)
+    this.jumps++
+  }
+
   endGame() {
     const saveScore = () => {
       const highScores = JSON.parse(localStorage.getItem('highScores') || '[]')
@@ -185,15 +176,116 @@ class Play extends Phaser.Scene {
     this.scene.start('EndScene')
   }
 
+  getState() {
+    // Gather relevant information about the game state
+    const playerX = this.player.x
+    const playerY = this.player.y
+    const playerVelY = this.player.body.velocity.y
+    const obstacleX = this.obstacles[0].x
+    const obstacleY = this.obstacles[0].y
+    const distToObs = playerX - obstacleX
+    const score = this.score
+
+    // Return the state as an array or object
+    return [
+      playerX,
+      playerY,
+      playerVelY,
+      obstacleX,
+      obstacleY,
+      distToObs,
+      score,
+    ]
+  }
+
+  qLearningUpdate(state, action, nextState, reward) {
+    console.log('state', state)
+    // Get the current Q-values for the current state
+    const currentQValues = this.qNetwork.predict(state)
+    console.log('currentQValues', currentQValues)
+
+    // Get the Q-value for the chosen action
+    const qValue = currentQValues[action]
+    console.log('qValue', qValue)
+
+    // Get the Q-values for the next state
+    const nextQValues = this.qNetwork.predict(nextState)
+    console.log('nextQValues', nextQValues)
+
+    // Find the maximum Q-value for the next state
+    const maxNextQValue = Math.max(...nextQValues)
+    console.log('maxNextQValue', maxNextQValue)
+    // Calculate the updated Q-value using the Q-learning equation
+    const updatedQValue =
+      qValue +
+      this.learningRate *
+        (reward + this.discountFactor * maxNextQValue - qValue)
+
+    // Update the Q-values for the current state
+    const updatedQValues = [...currentQValues]
+    updatedQValues[action] = updatedQValue
+
+    // Update the weights of the Q-network
+    this.qNetwork.updateWeights(updatedQValues, state)
+  }
+
+  gameLoop() {
+    // Get the current state
+    const currentState = this.getState()
+
+    // Choose an action (0 for JUMP, 1 for DO_NOTHING)
+    const action = this.qNetwork
+      .predict(currentState)
+      .indexOf(Math.max(...this.qNetwork.predict(currentState)))
+    console.log('action', action)
+
+    // Perform the chosen action
+    if (action === 0) {
+      console.log('object')
+      this.jump()
+    }
+
+    // Get the next state and reward
+    const nextState = this.getState()
+    console.log('nextState', nextState)
+    const reward = this.calculateReward()
+    console.log('reward', reward)
+
+    // Update the Q-values
+    this.qLearningUpdate(currentState, action, nextState, reward)
+
+    // Check termination condition and continue or end the game loop
+    if (this.gameOver) {
+      this.restart()
+      this.gameOver = false
+    }
+  }
+
+  calculateReward() {
+    // Get the player's position and size
+    // Check for collision
+    if (this.gameOver) {
+      // Player has collided with an obstacle, give a negative reward
+      return -1
+    }
+
+    // Player has not collided with an obstacle, give a positive reward
+    return 1
+  }
+
+  restart() {
+    this.scene.restart()
+  }
+
   update() {
+    const savedWeights = JSON.parse(JSON.stringify(this.qNetwork.weights))
     const { up, down } = this.cursors
 
     let onGround =
       this.player.body.blocked.down || this.player.body.touching.down
 
     if (up.isDown && this.jumps < 3) {
-      this.player.setVelocityY(-this.playerSpeed)
-      this.jumps++
+      this.jump()
     } else if (down.isDown && !onGround) {
       this.player.setVelocityY(this.playerSpeed)
     }
@@ -230,7 +322,11 @@ class Play extends Phaser.Scene {
 
     this.obstacles.forEach((obstacle) => (obstacle.x -= this.gameSpeed))
     this.obstacles.forEach((obstacle) => {
-      this.physics.add.collider(this.player, obstacle, () => this.endGame())
+      this.physics.add.collider(
+        this.player,
+        obstacle,
+        () => (this.gameOver = true)
+      )
     })
 
     if (this.bgs1[0].x <= -this.bgWidth) {
@@ -293,6 +389,9 @@ class Play extends Phaser.Scene {
     if (this.player.y + 48 >= this.game.config.height || this.player.y <= 0) {
       this.endGame()
     }
+
+    this.gameLoop()
+    this.qNetwork.weights = JSON.parse(JSON.stringify(savedWeights))
   }
 }
 

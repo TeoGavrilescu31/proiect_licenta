@@ -20,27 +20,34 @@ class NeuralNetwork {
       weights.push(layerWeights)
     }
 
+    console.log('weights', weights)
+
     return weights
   }
 
   // Metodă pentru realizarea predicției pe baza intrărilor
   predict(inputs) {
     const outputs = []
+    console.log('inputs', inputs)
+    console.log('this.weights', this.weights)
 
     // Calcularea ponderilor înmulțite cu intrările și aplicarea funcției de activare
     for (let i = 0; i < this.outputSize; i++) {
       let sum = 0
       for (let j = 0; j < this.inputSize; j++) {
         sum += inputs[j] * this.weights[i][j]
+        console.log('this.weights[i][j]', this.weights[i][j])
       }
-      const output = this.activationFunction(sum)
+      const output = Math.floor(this.activationFunction(sum))
+      console.log('output', output)
       outputs.push(output)
     }
+
+    console.log('outputs', outputs)
 
     return outputs
   }
 
-  // Funcție de activare - poți utiliza sigmoid, ReLU, tanh etc.
   activationFunction(x) {
     return 1 / (1 + Math.exp(-x))
   }
